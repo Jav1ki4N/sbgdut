@@ -1,0 +1,7 @@
+Metadata-Version: 2.1
+Name: pc-ws-bridge
+Version: 0.1.0
+Summary: PC ROS 2 to public WebSocket JSON bridge for link testing.
+Maintainer: SBGDUT
+Maintainer-email: maintainer@example.com
+License: MIT

@@ -1,0 +1,17 @@
+[3.020s] Invoking command in '/home/cat/Desktop/SBGDUT/build/rk3576_ws_bridge': PYTHONPATH=/home/cat/Desktop/SBGDUT/build/rk3576_ws_bridge/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/cat/Desktop/SBGDUT/install/rk3576_ws_bridge/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/cat/Desktop/SBGDUT/build/rk3576_ws_bridge/build --no-deps symlink_data
+[3.912s] running develop
+[4.529s] running egg_info
+[4.531s] writing rk3576_ws_bridge.egg-info/PKG-INFO
+[4.532s] writing dependency_links to rk3576_ws_bridge.egg-info/dependency_links.txt
+[4.532s] writing entry points to rk3576_ws_bridge.egg-info/entry_points.txt
+[4.533s] writing requirements to rk3576_ws_bridge.egg-info/requires.txt
+[4.533s] writing top-level names to rk3576_ws_bridge.egg-info/top_level.txt
+[4.537s] reading manifest file 'rk3576_ws_bridge.egg-info/SOURCES.txt'
+[4.540s] writing manifest file 'rk3576_ws_bridge.egg-info/SOURCES.txt'
+[4.546s] running build_ext
+[4.547s] Creating /home/cat/Desktop/SBGDUT/install/rk3576_ws_bridge/lib/python3.10/site-packages/rk3576-ws-bridge.egg-link (link to .)
+[4.551s] Installing bridge_node script to /home/cat/Desktop/SBGDUT/install/rk3576_ws_bridge/lib/rk3576_ws_bridge
+[4.553s] 
+[4.553s] Installed /home/cat/Desktop/SBGDUT/build/rk3576_ws_bridge
+[4.554s] running symlink_data
+[4.671s] Invoked command in '/home/cat/Desktop/SBGDUT/build/rk3576_ws_bridge' returned '0': PYTHONPATH=/home/cat/Desktop/SBGDUT/build/rk3576_ws_bridge/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/cat/Desktop/SBGDUT/install/rk3576_ws_bridge/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/cat/Desktop/SBGDUT/build/rk3576_ws_bridge/build --no-deps symlink_data

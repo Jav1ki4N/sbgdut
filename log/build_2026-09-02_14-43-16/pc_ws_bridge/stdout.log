@@ -1,0 +1,26 @@
+running develop
+running egg_info
+creating pc_ws_bridge.egg-info
+writing pc_ws_bridge.egg-info/PKG-INFO
+writing dependency_links to pc_ws_bridge.egg-info/dependency_links.txt
+writing entry points to pc_ws_bridge.egg-info/entry_points.txt
+writing requirements to pc_ws_bridge.egg-info/requires.txt
+writing top-level names to pc_ws_bridge.egg-info/top_level.txt
+writing manifest file 'pc_ws_bridge.egg-info/SOURCES.txt'
+reading manifest file 'pc_ws_bridge.egg-info/SOURCES.txt'
+writing manifest file 'pc_ws_bridge.egg-info/SOURCES.txt'
+running build_ext
+Creating /home/i4n/Desktop/GDUT/install/pc_ws_bridge/lib/python3.12/site-packages/pc-ws-bridge.egg-link (link to .)
+Installing bridge_node script to /home/i4n/Desktop/GDUT/install/pc_ws_bridge/lib/pc_ws_bridge
+
+Installed /home/i4n/Desktop/GDUT/build/pc_ws_bridge
+running symlink_data
+creating /home/i4n/Desktop/GDUT/install/pc_ws_bridge/share/ament_index
+creating /home/i4n/Desktop/GDUT/install/pc_ws_bridge/share/ament_index/resource_index
+creating /home/i4n/Desktop/GDUT/install/pc_ws_bridge/share/ament_index/resource_index/packages
+symbolically linking /home/i4n/Desktop/GDUT/build/pc_ws_bridge/resource/pc_ws_bridge -> /home/i4n/Desktop/GDUT/install/pc_ws_bridge/share/ament_index/resource_index/packages
+symbolically linking /home/i4n/Desktop/GDUT/build/pc_ws_bridge/package.xml -> /home/i4n/Desktop/GDUT/install/pc_ws_bridge/share/pc_ws_bridge
+creating /home/i4n/Desktop/GDUT/install/pc_ws_bridge/share/pc_ws_bridge/launch
+symbolically linking /home/i4n/Desktop/GDUT/build/pc_ws_bridge/launch/bridge.launch.py -> /home/i4n/Desktop/GDUT/install/pc_ws_bridge/share/pc_ws_bridge/launch
+creating /home/i4n/Desktop/GDUT/install/pc_ws_bridge/share/pc_ws_bridge/config
+symbolically linking /home/i4n/Desktop/GDUT/build/pc_ws_bridge/config/bridge.yaml -> /home/i4n/Desktop/GDUT/install/pc_ws_bridge/share/pc_ws_bridge/config

@@ -1,0 +1,12 @@
+Metadata-Version: 2.1
+Name: rk3576-ws-bridge
+Version: 0.1.0
+Summary: RK3576 ROS 2 to public WebSocket JSON bridge for link testing.
+Home-page: UNKNOWN
+Maintainer: SBGDUT
+Maintainer-email: maintainer@example.com
+License: MIT
+Platform: UNKNOWN
+
+UNKNOWN
+

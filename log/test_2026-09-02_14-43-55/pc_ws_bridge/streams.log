@@ -1,0 +1,13 @@
+[0.193s] Invoking command in '/home/i4n/Desktop/GDUT/pc_ws_bridge': DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTEST_ADDOPTS=--tb=short --junit-xml=/home/i4n/Desktop/GDUT/build/pc_ws_bridge/pytest.xml --junit-prefix=pc_ws_bridge -o cache_dir=/home/i4n/Desktop/GDUT/build/pc_ws_bridge/.pytest_cache PYTHONDONTWRITEBYTECODE=1 /usr/bin/python3 -m pytest
+[0.574s] ============================= test session starts ==============================
+[0.574s] platform linux -- Python 3.12.3, pytest-7.4.4, pluggy-1.4.0
+[0.575s] cachedir: /home/i4n/Desktop/GDUT/build/pc_ws_bridge/.pytest_cache
+[0.575s] rootdir: /home/i4n/Desktop/GDUT/pc_ws_bridge
+[0.575s] plugins: ament-xmllint-0.17.5, ament-lint-0.17.5, ament-flake8-0.17.5, ament-copyright-0.17.5, launch-testing-3.4.10, ament-pep257-0.17.5, launch-testing-ros-0.26.11, cov-4.1.0, colcon-core-0.20.1
+[0.575s] collected 32 items
+[0.575s] 
+[0.600s] test/test_protocol.py ................................                   [100%]
+[0.600s] 
+[0.600s] --- generated xml file: /home/i4n/Desktop/GDUT/build/pc_ws_bridge/pytest.xml ---
+[0.600s] ============================== 32 passed in 0.04s ==============================
+[0.655s] Invoked command in '/home/i4n/Desktop/GDUT/pc_ws_bridge' returned '0': DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTEST_ADDOPTS=--tb=short --junit-xml=/home/i4n/Desktop/GDUT/build/pc_ws_bridge/pytest.xml --junit-prefix=pc_ws_bridge -o cache_dir=/home/i4n/Desktop/GDUT/build/pc_ws_bridge/.pytest_cache PYTHONDONTWRITEBYTECODE=1 /usr/bin/python3 -m pytest

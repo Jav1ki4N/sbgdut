@@ -1,0 +1,6 @@
+rk3576_ws_bridge:
+  ros__parameters:
+    server_uri: "ws://8.134.118.29:8771"
+    outbound_topic: "/cat_to_pc"
+    inbound_topic: "/pc_to_cat"
+    reconnect_delay: 2.0

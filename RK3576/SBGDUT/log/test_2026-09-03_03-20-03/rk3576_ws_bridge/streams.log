@@ -1,0 +1,13 @@
+[0.984s] Invoking command in '/home/cat/Desktop/SBGDUT/rk3576_ws_bridge': AMENT_PREFIX_PATH=/home/cat/Desktop/SBGDUT/install/rk3576_ws_bridge:${AMENT_PREFIX_PATH} PYTEST_ADDOPTS=--tb=short --junit-xml=/home/cat/Desktop/SBGDUT/build/rk3576_ws_bridge/pytest.xml --junit-prefix=rk3576_ws_bridge -o cache_dir=/home/cat/Desktop/SBGDUT/build/rk3576_ws_bridge/.pytest_cache PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/home/cat/Desktop/SBGDUT/build/rk3576_ws_bridge:/home/cat/Desktop/SBGDUT/install/rk3576_ws_bridge/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -m pytest
+[1.999s] ============================= test session starts ==============================
+[2.000s] platform linux -- Python 3.10.12, pytest-6.2.5, py-1.10.0, pluggy-0.13.0
+[2.001s] cachedir: /home/cat/Desktop/SBGDUT/build/rk3576_ws_bridge/.pytest_cache
+[2.002s] rootdir: /home/cat/Desktop/SBGDUT/rk3576_ws_bridge
+[2.003s] plugins: ament-flake8-0.12.15, ament-pep257-0.12.15, launch-testing-ros-0.19.14, launch-testing-1.0.14, ament-lint-0.12.15, ament-copyright-0.12.15, ament-xmllint-0.12.15, cov-3.0.0, colcon-core-0.21.1
+[2.004s] collected 9 items
+[2.005s] 
+[2.062s] test/test_protocol.py .........                                          [100%]
+[2.063s] 
+[2.063s] - generated xml file: /home/cat/Desktop/SBGDUT/build/rk3576_ws_bridge/pytest.xml -
+[2.064s] ============================== 9 passed in 0.11s ===============================
+[2.235s] Invoked command in '/home/cat/Desktop/SBGDUT/rk3576_ws_bridge' returned '0': AMENT_PREFIX_PATH=/home/cat/Desktop/SBGDUT/install/rk3576_ws_bridge:${AMENT_PREFIX_PATH} PYTEST_ADDOPTS=--tb=short --junit-xml=/home/cat/Desktop/SBGDUT/build/rk3576_ws_bridge/pytest.xml --junit-prefix=rk3576_ws_bridge -o cache_dir=/home/cat/Desktop/SBGDUT/build/rk3576_ws_bridge/.pytest_cache PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/home/cat/Desktop/SBGDUT/build/rk3576_ws_bridge:/home/cat/Desktop/SBGDUT/install/rk3576_ws_bridge/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -m pytest

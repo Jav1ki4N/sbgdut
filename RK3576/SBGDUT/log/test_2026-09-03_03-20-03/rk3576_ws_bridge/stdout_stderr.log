@@ -1,0 +1,11 @@
+============================= test session starts ==============================
+platform linux -- Python 3.10.12, pytest-6.2.5, py-1.10.0, pluggy-0.13.0
+cachedir: /home/cat/Desktop/SBGDUT/build/rk3576_ws_bridge/.pytest_cache
+rootdir: /home/cat/Desktop/SBGDUT/rk3576_ws_bridge
+plugins: ament-flake8-0.12.15, ament-pep257-0.12.15, launch-testing-ros-0.19.14, launch-testing-1.0.14, ament-lint-0.12.15, ament-copyright-0.12.15, ament-xmllint-0.12.15, cov-3.0.0, colcon-core-0.21.1
+collected 9 items
+
+test/test_protocol.py .........                                          [100%]
+
+- generated xml file: /home/cat/Desktop/SBGDUT/build/rk3576_ws_bridge/pytest.xml -
+============================== 9 passed in 0.11s ===============================

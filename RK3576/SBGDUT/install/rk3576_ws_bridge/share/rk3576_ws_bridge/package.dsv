@@ -1,0 +1,9 @@
+source;share/rk3576_ws_bridge/hook/pythonpath.ps1
+source;share/rk3576_ws_bridge/hook/pythonpath.dsv
+source;share/rk3576_ws_bridge/hook/pythonpath.sh
+source;share/rk3576_ws_bridge/hook/ament_prefix_path.ps1
+source;share/rk3576_ws_bridge/hook/ament_prefix_path.dsv
+source;share/rk3576_ws_bridge/hook/ament_prefix_path.sh
+source;../../build/rk3576_ws_bridge/share/rk3576_ws_bridge/hook/pythonpath_develop.ps1
+source;../../build/rk3576_ws_bridge/share/rk3576_ws_bridge/hook/pythonpath_develop.dsv
+source;../../build/rk3576_ws_bridge/share/rk3576_ws_bridge/hook/pythonpath_develop.sh

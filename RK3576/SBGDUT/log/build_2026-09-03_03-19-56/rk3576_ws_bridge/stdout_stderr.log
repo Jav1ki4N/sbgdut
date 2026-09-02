@@ -1,0 +1,15 @@
+running develop
+running egg_info
+writing rk3576_ws_bridge.egg-info/PKG-INFO
+writing dependency_links to rk3576_ws_bridge.egg-info/dependency_links.txt
+writing entry points to rk3576_ws_bridge.egg-info/entry_points.txt
+writing requirements to rk3576_ws_bridge.egg-info/requires.txt
+writing top-level names to rk3576_ws_bridge.egg-info/top_level.txt
+reading manifest file 'rk3576_ws_bridge.egg-info/SOURCES.txt'
+writing manifest file 'rk3576_ws_bridge.egg-info/SOURCES.txt'
+running build_ext
+Creating /home/cat/Desktop/SBGDUT/install/rk3576_ws_bridge/lib/python3.10/site-packages/rk3576-ws-bridge.egg-link (link to .)
+Installing bridge_node script to /home/cat/Desktop/SBGDUT/install/rk3576_ws_bridge/lib/rk3576_ws_bridge
+
+Installed /home/cat/Desktop/SBGDUT/build/rk3576_ws_bridge
+running symlink_data
