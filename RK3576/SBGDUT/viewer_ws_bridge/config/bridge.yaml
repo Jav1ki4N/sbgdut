@@ -1,0 +1,8 @@
+viewer_ws_bridge:
+  ros__parameters:
+    server_uri: "ws://8.134.118.29:8771"
+    control_topic: "/viewer/control_test"
+    status_topic: "/viewer/status_test"
+    reconnect_delay: 2.0
+    control_timeout: 0.5
+    max_message_age: 2.0

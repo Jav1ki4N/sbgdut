@@ -1,0 +1,16 @@
+package.xml
+setup.cfg
+setup.py
+config/bridge.yaml
+launch/bridge.launch.py
+resource/viewer_ws_bridge
+viewer_ws_bridge/__init__.py
+viewer_ws_bridge/bridge_node.py
+viewer_ws_bridge/protocol.py
+viewer_ws_bridge.egg-info/PKG-INFO
+viewer_ws_bridge.egg-info/SOURCES.txt
+viewer_ws_bridge.egg-info/dependency_links.txt
+viewer_ws_bridge.egg-info/entry_points.txt
+viewer_ws_bridge.egg-info/requires.txt
+viewer_ws_bridge.egg-info/top_level.txt
+viewer_ws_bridge.egg-info/zip-safe

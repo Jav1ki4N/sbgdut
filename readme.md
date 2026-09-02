@@ -81,3 +81,5 @@ source /opt/ros/humble/setup.bash && source /home/cat/Desktop/SBGDUT/install/set
 详见 [第二阶段复现说明](RK3576/SBGDUT/第二阶段ROS2双向Topic测试.md)、
 [RK3576 Bridge README](RK3576/SBGDUT/rk3576_ws_bridge/README.md) 和
 [PC Bridge README](pc_ws_bridge/README.md)。
+
+后续 Qt 上位机接入见 [ros2_viewer 集成说明](ros2_viewer集成说明.md)。

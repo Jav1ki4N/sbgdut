@@ -1,0 +1,7 @@
+Metadata-Version: 2.1
+Name: viewer-ws-bridge
+Version: 0.1.0
+Summary: Safe dummy ROS 2 bridge for the GDUT Qt viewer protocol.
+Maintainer: SBGDUT
+Maintainer-email: maintainer@example.com
+License: MIT

@@ -1,0 +1,26 @@
+running develop
+running egg_info
+creating viewer_ws_bridge.egg-info
+writing viewer_ws_bridge.egg-info/PKG-INFO
+writing dependency_links to viewer_ws_bridge.egg-info/dependency_links.txt
+writing entry points to viewer_ws_bridge.egg-info/entry_points.txt
+writing requirements to viewer_ws_bridge.egg-info/requires.txt
+writing top-level names to viewer_ws_bridge.egg-info/top_level.txt
+writing manifest file 'viewer_ws_bridge.egg-info/SOURCES.txt'
+reading manifest file 'viewer_ws_bridge.egg-info/SOURCES.txt'
+writing manifest file 'viewer_ws_bridge.egg-info/SOURCES.txt'
+running build_ext
+Creating /home/i4n/Desktop/GDUT/RK3576/SBGDUT/install/viewer_ws_bridge/lib/python3.12/site-packages/viewer-ws-bridge.egg-link (link to .)
+Installing bridge_node script to /home/i4n/Desktop/GDUT/RK3576/SBGDUT/install/viewer_ws_bridge/lib/viewer_ws_bridge
+
+Installed /home/i4n/Desktop/GDUT/RK3576/SBGDUT/build/viewer_ws_bridge
+running symlink_data
+creating /home/i4n/Desktop/GDUT/RK3576/SBGDUT/install/viewer_ws_bridge/share/ament_index
+creating /home/i4n/Desktop/GDUT/RK3576/SBGDUT/install/viewer_ws_bridge/share/ament_index/resource_index
+creating /home/i4n/Desktop/GDUT/RK3576/SBGDUT/install/viewer_ws_bridge/share/ament_index/resource_index/packages
+symbolically linking /home/i4n/Desktop/GDUT/RK3576/SBGDUT/build/viewer_ws_bridge/resource/viewer_ws_bridge -> /home/i4n/Desktop/GDUT/RK3576/SBGDUT/install/viewer_ws_bridge/share/ament_index/resource_index/packages
+symbolically linking /home/i4n/Desktop/GDUT/RK3576/SBGDUT/build/viewer_ws_bridge/package.xml -> /home/i4n/Desktop/GDUT/RK3576/SBGDUT/install/viewer_ws_bridge/share/viewer_ws_bridge
+creating /home/i4n/Desktop/GDUT/RK3576/SBGDUT/install/viewer_ws_bridge/share/viewer_ws_bridge/launch
+symbolically linking /home/i4n/Desktop/GDUT/RK3576/SBGDUT/build/viewer_ws_bridge/launch/bridge.launch.py -> /home/i4n/Desktop/GDUT/RK3576/SBGDUT/install/viewer_ws_bridge/share/viewer_ws_bridge/launch
+creating /home/i4n/Desktop/GDUT/RK3576/SBGDUT/install/viewer_ws_bridge/share/viewer_ws_bridge/config
+symbolically linking /home/i4n/Desktop/GDUT/RK3576/SBGDUT/build/viewer_ws_bridge/config/bridge.yaml -> /home/i4n/Desktop/GDUT/RK3576/SBGDUT/install/viewer_ws_bridge/share/viewer_ws_bridge/config
