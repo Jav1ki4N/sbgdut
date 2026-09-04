@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>GDUT WebRTC Viewer</title>
+  <style>
+    html, body { height: 100%; margin: 0; background: #0b1020; color: #dbeafe; font-family: sans-serif; }
+    body { display: grid; grid-template-rows: 1fr auto; }
+    video { width: 100%; height: 100%; min-height: 0; object-fit: contain; background: #000; }
+    #status { padding: 8px 12px; background: #111827; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <video id="video" autoplay muted playsinline controls></video>
+  <div id="status">正在连接信令服务器…</div>
+  <script>
+    const video = document.getElementById("video");
+    const statusBox = document.getElementById("status");
+    const signalScheme = location.protocol === "https:" ? "wss" : "ws";
+    const signalUrl = `${signalScheme}://${location.hostname}:8765`;
+    const iceServers = [{urls: "stun:stun.l.google.com:19302"}];
+
+    let socket = null;
+    let peer = null;
+    let pendingCandidates = [];
+    let reconnectTimer = null;
+
+    function setStatus(message) {
+      statusBox.textContent = message;
+    }
+
+    function send(message) {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify(message));
+      }
+    }
+
+    function closePeer() {
+      pendingCandidates = [];
+      video.srcObject = null;
+      if (peer) {
+        peer.close();
+        peer = null;
+      }
+    }
+
+    function createPeer() {
+      closePeer();
+      peer = new RTCPeerConnection({iceServers});
+      peer.onicecandidate = event => {
+        if (event.candidate) {
+          send({type: "candidate", candidate: event.candidate.toJSON()});
+        }
+      };
+      peer.ontrack = event => {
+        video.srcObject = event.streams[0] || new MediaStream([event.track]);
+        video.play().catch(() => setStatus("收到视频；点击画面开始播放"));
+      };
+      peer.onconnectionstatechange = () => {
+        setStatus(`WebRTC: ${peer.connectionState}`);
+      };
+      return peer;
+    }
+
+    async function handleSignal(message) {
+      if (message.type === "registered") {
+        setStatus("信令已连接，等待视频发送端…");
+        return;
+      }
+      if (message.type === "peer-disconnected") {
+        closePeer();
+        setStatus("视频发送端已断开");
+        return;
+      }
+      if (message.type === "offer") {
+        const queuedCandidates = pendingCandidates.slice();
+        const current = createPeer();
+        await current.setRemoteDescription({type: "offer", sdp: message.sdp});
+        for (const candidate of queuedCandidates) {
+          await current.addIceCandidate(candidate);
+        }
+        const answer = await current.createAnswer();
+        await current.setLocalDescription(answer);
+        send({type: "answer", sdp: current.localDescription.sdp});
+        return;
+      }
+      if (message.type === "candidate") {
+        if (peer && peer.remoteDescription) {
+          await peer.addIceCandidate(message.candidate);
+        } else {
+          pendingCandidates.push(message.candidate);
+        }
+      }
+    }
+
+    function connectSignal() {
+      clearTimeout(reconnectTimer);
+      setStatus(`正在连接 ${signalUrl}`);
+      socket = new WebSocket(signalUrl);
+      socket.onopen = () => send({type: "register", role: "viewer"});
+      socket.onmessage = event => {
+        try {
+          const message = JSON.parse(event.data);
+          handleSignal(message).catch(error => setStatus(`信令处理失败：${error.message}`));
+        } catch (error) {
+          setStatus(`收到无效信令：${error.message}`);
+        }
+      };
+      socket.onerror = () => setStatus("信令连接错误");
+      socket.onclose = () => {
+        closePeer();
+        setStatus("信令已断开，2 秒后重连");
+        reconnectTimer = setTimeout(connectSignal, 2000);
+      };
+    }
+
+    connectSignal();
+  </script>
+</body>
+</html>

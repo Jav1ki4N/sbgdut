@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""PC <-> cloud <-> RK3576 WebSocket JSON relay.
+"""Paired WebSocket JSON relay for PC, viewer, and vehicle-side nodes.
 
-The PC connects to port 8770 and the RK3576 connects to port 8771.
-An additional, independent viewer connection can use port 8772. Navigation
-routing and message semantics for that connection are intentionally left for a
+Ports 8770 and 8771 form one bidirectional relay pair. The status node on port
+8772 and the viewer on port 8773 form another. Ports 8774 through 8777 accept
+independent placeholder connections whose routing is intentionally left for a
 later stage.
 Run on the cloud server with:
 
@@ -14,9 +14,10 @@ ports with the cloud security group and Windows Firewall during testing.
 """
 
 import asyncio
+from contextlib import AsyncExitStack
 import json
 import logging
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 import websockets
 
@@ -24,7 +25,26 @@ import websockets
 HOST = "0.0.0.0"
 PC_PORT = 8770
 RK3576_PORT = 8771
-NAVIGATION_PORT = 8772
+STATUS_NODE_PORT = 8772
+VIEWER_PORT = 8773
+RELAY_PORTS = {
+    "PC": PC_PORT,
+    "RK3576": RK3576_PORT,
+    "STATUS_NODE": STATUS_NODE_PORT,
+    "VIEWER": VIEWER_PORT,
+}
+RELAY_TARGETS = {
+    "PC": "RK3576",
+    "RK3576": "PC",
+    "STATUS_NODE": "VIEWER",
+    "VIEWER": "STATUS_NODE",
+}
+PASSIVE_PORTS = {
+    "PORT_8774": 8774,
+    "PORT_8775": 8775,
+    "PORT_8776": 8776,
+    "PORT_8777": 8777,
+}
 MAX_MESSAGE_BYTES = 1024 * 1024
 
 logging.basicConfig(
@@ -34,9 +54,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger("gdut-relay")
 
-pc_client: Optional[Any] = None
-rk3576_client: Optional[Any] = None
-navigation_client: Optional[Any] = None
+relay_clients: Dict[str, Any] = {}
+passive_clients: Dict[str, Any] = {}
 client_lock: Optional[asyncio.Lock] = None
 
 
@@ -47,15 +66,10 @@ def peer_name(websocket: Any) -> str:
 
 async def replace_client(role: str, websocket: Any) -> None:
     """Keep only the newest connection for each role."""
-    global pc_client, rk3576_client
-
     assert client_lock is not None
     async with client_lock:
-        previous = pc_client if role == "PC" else rk3576_client
-        if role == "PC":
-            pc_client = websocket
-        else:
-            rk3576_client = websocket
+        previous = relay_clients.get(role)
+        relay_clients[role] = websocket
 
     if previous is not None and previous is not websocket:
         logger.warning("%s 新连接替换旧连接", role)
@@ -63,20 +77,16 @@ async def replace_client(role: str, websocket: Any) -> None:
 
 
 async def clear_client(role: str, websocket: Any) -> None:
-    global pc_client, rk3576_client
-
     assert client_lock is not None
     async with client_lock:
-        if role == "PC" and pc_client is websocket:
-            pc_client = None
-        elif role == "RK3576" and rk3576_client is websocket:
-            rk3576_client = None
+        if relay_clients.get(role) is websocket:
+            relay_clients.pop(role)
 
 
 async def current_target(role: str) -> Optional[Any]:
     assert client_lock is not None
     async with client_lock:
-        return rk3576_client if role == "PC" else pc_client
+        return relay_clients.get(RELAY_TARGETS[role])
 
 
 async def relay_handler(websocket: Any, role: str) -> None:
@@ -100,15 +110,16 @@ async def relay_handler(websocket: Any, role: str) -> None:
                 continue
 
             target = await current_target(role)
+            target_role = RELAY_TARGETS[role]
             if target is None:
-                logger.warning("收到 %s 消息，但对端尚未连接", role)
+                logger.warning("收到 %s 消息，但 %s 尚未连接", role, target_role)
                 continue
 
             try:
                 # Forward the original text without changing either side's schema.
                 await target.send(raw_message)
                 message_type = parsed.get("type", "unknown") if isinstance(parsed, dict) else "array"
-                logger.info("%s -> %s | type=%s | bytes=%d", role, "RK3576" if role == "PC" else "PC", message_type, len(raw_message.encode("utf-8")))
+                logger.info("%s -> %s | type=%s | bytes=%d", role, target_role, message_type, len(raw_message.encode("utf-8")))
             except websockets.ConnectionClosed:
                 logger.warning("%s 消息未转发：对端连接已关闭", role)
     except websockets.ConnectionClosed as event:
@@ -120,31 +131,28 @@ async def relay_handler(websocket: Any, role: str) -> None:
         logger.info("%s 已断开: %s", role, peer_name(websocket))
 
 
-async def pc_handler(websocket: Any, path: Any = None) -> None:
-    del path
-    await relay_handler(websocket, "PC")
+def make_relay_handler(role: str) -> Any:
+    """Create a WebSocket handler bound to one side of a relay pair."""
+
+    async def handler(websocket: Any, path: Any = None) -> None:
+        del path
+        await relay_handler(websocket, role)
+
+    return handler
 
 
-async def rk3576_handler(websocket: Any, path: Any = None) -> None:
-    del path
-    await relay_handler(websocket, "RK3576")
-
-
-async def navigation_handler(websocket: Any, path: Any = None) -> None:
-    """Keep an independent viewer connection open on the navigation port."""
-    global navigation_client
-
-    del path
+async def passive_handler(websocket: Any, role: str) -> None:
+    """Keep an independent connection open without routing its messages yet."""
     assert client_lock is not None
     async with client_lock:
-        previous = navigation_client
-        navigation_client = websocket
+        previous = passive_clients.get(role)
+        passive_clients[role] = websocket
 
     if previous is not None and previous is not websocket:
-        logger.warning("NAVIGATION 新连接替换旧连接")
+        logger.warning("%s 新连接替换旧连接", role)
         await previous.close(code=4001, reason="replaced by a newer connection")
 
-    logger.info("NAVIGATION 已连接: %s", peer_name(websocket))
+    logger.info("%s 已连接: %s", role, peer_name(websocket))
     try:
         async for raw_message in websocket:
             message_size = (
@@ -153,19 +161,27 @@ async def navigation_handler(websocket: Any, path: Any = None) -> None:
                 else len(raw_message.encode("utf-8"))
             )
             logger.info(
-                "收到 NAVIGATION 消息但路由尚未配置 | bytes=%d", message_size
+                "收到 %s 消息但路由尚未配置 | bytes=%d", role, message_size
             )
     except websockets.ConnectionClosed as event:
-        logger.info(
-            "NAVIGATION 连接关闭: code=%s reason=%s", event.code, event.reason
-        )
+        logger.info("%s 连接关闭: code=%s reason=%s", role, event.code, event.reason)
     except Exception:
-        logger.exception("处理 NAVIGATION 连接时发生异常")
+        logger.exception("处理 %s 连接时发生异常", role)
     finally:
         async with client_lock:
-            if navigation_client is websocket:
-                navigation_client = None
-        logger.info("NAVIGATION 已断开: %s", peer_name(websocket))
+            if passive_clients.get(role) is websocket:
+                passive_clients.pop(role)
+        logger.info("%s 已断开: %s", role, peer_name(websocket))
+
+
+def make_passive_handler(role: str) -> Any:
+    """Create a WebSocket handler bound to one independent connection role."""
+
+    async def handler(websocket: Any, path: Any = None) -> None:
+        del path
+        await passive_handler(websocket, role)
+
+    return handler
 
 
 async def main() -> None:
@@ -173,32 +189,28 @@ async def main() -> None:
     client_lock = asyncio.Lock()
 
     logger.info("启动双向 JSON 中继")
-    logger.info("PC     -> ws://<server>:%d", PC_PORT)
-    logger.info("RK3576 -> ws://<server>:%d", RK3576_PORT)
-    logger.info("NAV    -> ws://<server>:%d", NAVIGATION_PORT)
+    for role, port in RELAY_PORTS.items():
+        logger.info("%-11s -> ws://<server>:%d", role, port)
+    for role, port in PASSIVE_PORTS.items():
+        logger.info("%-11s -> ws://<server>:%d (路由未配置)", role, port)
 
-    async with websockets.serve(
-        pc_handler,
-        HOST,
-        PC_PORT,
-        ping_interval=20,
-        ping_timeout=10,
-        max_size=MAX_MESSAGE_BYTES,
-    ), websockets.serve(
-        rk3576_handler,
-        HOST,
-        RK3576_PORT,
-        ping_interval=20,
-        ping_timeout=10,
-        max_size=MAX_MESSAGE_BYTES,
-    ), websockets.serve(
-        navigation_handler,
-        HOST,
-        NAVIGATION_PORT,
-        ping_interval=20,
-        ping_timeout=10,
-        max_size=MAX_MESSAGE_BYTES,
-    ):
+    server_specs = (
+        *((make_relay_handler(role), port) for role, port in RELAY_PORTS.items()),
+        *((make_passive_handler(role), port) for role, port in PASSIVE_PORTS.items()),
+    )
+
+    async with AsyncExitStack() as stack:
+        for handler, port in server_specs:
+            await stack.enter_async_context(
+                websockets.serve(
+                    handler,
+                    HOST,
+                    port,
+                    ping_interval=20,
+                    ping_timeout=10,
+                    max_size=MAX_MESSAGE_BYTES,
+                )
+            )
         await asyncio.Future()
 
 
