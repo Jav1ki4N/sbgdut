@@ -2,11 +2,14 @@
 """PC <-> cloud <-> RK3576 WebSocket JSON relay.
 
 The PC connects to port 8770 and the RK3576 connects to port 8771.
+An additional, independent viewer connection can use port 8772. Navigation
+routing and message semantics for that connection are intentionally left for a
+later stage.
 Run on the cloud server with:
 
     python relay_server.py
 
-This is a link-test relay. It has no authentication or TLS; restrict both
+This is a link-test relay. It has no authentication or TLS; restrict all
 ports with the cloud security group and Windows Firewall during testing.
 """
 
@@ -21,6 +24,7 @@ import websockets
 HOST = "0.0.0.0"
 PC_PORT = 8770
 RK3576_PORT = 8771
+NAVIGATION_PORT = 8772
 MAX_MESSAGE_BYTES = 1024 * 1024
 
 logging.basicConfig(
@@ -32,6 +36,7 @@ logger = logging.getLogger("gdut-relay")
 
 pc_client: Optional[Any] = None
 rk3576_client: Optional[Any] = None
+navigation_client: Optional[Any] = None
 client_lock: Optional[asyncio.Lock] = None
 
 
@@ -125,6 +130,44 @@ async def rk3576_handler(websocket: Any, path: Any = None) -> None:
     await relay_handler(websocket, "RK3576")
 
 
+async def navigation_handler(websocket: Any, path: Any = None) -> None:
+    """Keep an independent viewer connection open on the navigation port."""
+    global navigation_client
+
+    del path
+    assert client_lock is not None
+    async with client_lock:
+        previous = navigation_client
+        navigation_client = websocket
+
+    if previous is not None and previous is not websocket:
+        logger.warning("NAVIGATION 新连接替换旧连接")
+        await previous.close(code=4001, reason="replaced by a newer connection")
+
+    logger.info("NAVIGATION 已连接: %s", peer_name(websocket))
+    try:
+        async for raw_message in websocket:
+            message_size = (
+                len(raw_message)
+                if isinstance(raw_message, bytes)
+                else len(raw_message.encode("utf-8"))
+            )
+            logger.info(
+                "收到 NAVIGATION 消息但路由尚未配置 | bytes=%d", message_size
+            )
+    except websockets.ConnectionClosed as event:
+        logger.info(
+            "NAVIGATION 连接关闭: code=%s reason=%s", event.code, event.reason
+        )
+    except Exception:
+        logger.exception("处理 NAVIGATION 连接时发生异常")
+    finally:
+        async with client_lock:
+            if navigation_client is websocket:
+                navigation_client = None
+        logger.info("NAVIGATION 已断开: %s", peer_name(websocket))
+
+
 async def main() -> None:
     global client_lock
     client_lock = asyncio.Lock()
@@ -132,6 +175,7 @@ async def main() -> None:
     logger.info("启动双向 JSON 中继")
     logger.info("PC     -> ws://<server>:%d", PC_PORT)
     logger.info("RK3576 -> ws://<server>:%d", RK3576_PORT)
+    logger.info("NAV    -> ws://<server>:%d", NAVIGATION_PORT)
 
     async with websockets.serve(
         pc_handler,
@@ -144,6 +188,13 @@ async def main() -> None:
         rk3576_handler,
         HOST,
         RK3576_PORT,
+        ping_interval=20,
+        ping_timeout=10,
+        max_size=MAX_MESSAGE_BYTES,
+    ), websockets.serve(
+        navigation_handler,
+        HOST,
+        NAVIGATION_PORT,
         ping_interval=20,
         ping_timeout=10,
         max_size=MAX_MESSAGE_BYTES,
