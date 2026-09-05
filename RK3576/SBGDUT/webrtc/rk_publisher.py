@@ -18,8 +18,15 @@ from gi.repository import GLib, Gst, GstSdp, GstWebRTC  # noqa: E402
 import websockets
 
 
-SIGNAL_URL = os.environ.get("WEBRTC_SIGNAL_URL", "ws://8.134.118.29:8765")
+SIGNAL_URL = os.environ.get("WEBRTC_SIGNAL_URL", "ws://203.195.243.106:8765")
 CAMERA = os.environ.get("WEBRTC_CAMERA", "/dev/video0")
+STUN_URL = os.environ.get(
+    "WEBRTC_STUN_URL", "stun://stun.miwifi.com:3478"
+)
+TURN_URL = os.environ.get(
+    "WEBRTC_TURN_URL",
+    "turn://gdut:a731f8fb76bb516e021623e71255bfd6@203.195.243.106:3478",
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -42,12 +49,14 @@ class Publisher:
     def build_pipeline(self) -> None:
         description = f"""
             webrtcbin name=webrtc bundle-policy=max-bundle
-                stun-server=stun://stun.l.google.com:19302
+                stun-server={STUN_URL}
+                turn-server={TURN_URL}
             v4l2src device={CAMERA} !
-                image/jpeg,width=1280,height=720,framerate=30/1 !
-                jpegparse ! jpegdec ! videoconvert !
-                video/x-raw,format=NV12 !
-                mpph264enc !
+                image/jpeg,width=640,height=360,framerate=30/1 !
+                jpegparse ! jpegdec ! videoconvert ! videorate !
+                video/x-raw,format=NV12,framerate=15/1 !
+                mpph264enc rc-mode=cbr bps=600000 bps-min=300000
+                    bps-max=800000 gop=15 !
                 h264parse config-interval=-1 !
                 video/x-h264,stream-format=byte-stream,alignment=au !
                 rtph264pay config-interval=-1 pt=96 !
@@ -69,7 +78,7 @@ class Publisher:
         result = pipeline.set_state(Gst.State.PLAYING)
         if result == Gst.StateChangeReturn.FAILURE:
             raise RuntimeError("failed to start GStreamer pipeline")
-        logger.info("camera pipeline started: %s (1280x720@30)", CAMERA)
+        logger.info("camera pipeline started: %s (640x360@15, 600 kbps)", CAMERA)
 
     def stop_pipeline(self) -> None:
         if self.pipeline is not None:

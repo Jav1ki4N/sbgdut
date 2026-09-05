@@ -1,14 +1,15 @@
 # WebRTC 视频链路复现与迁移说明
 
-本文记录 2026-09-04 完成的 WebRTC 视频链路、实际排障过程，以及如何把当前 RK3576
-验证环境迁移到 Raspberry Pi（RPi）发送端和另一台 Linux/Qt 上位机。
+本文记录 2026-09-04 至 2026-09-05 完成的 WebRTC 视频链路、实际排障过程，以及如何把
+当前 RK3576 验证环境迁移到 Raspberry Pi（RPi）发送端和另一台 Linux/Qt 上位机。
 
-文档中的“云服务器”是 Windows Server `8.134.118.29`，“RK”是本次用于替代 RPi
-完成验证的 RK3576，“上位机”是运行 Firefox 或 `ros2_viewer` 的 Arch Linux PC。
+早期验证使用 Windows Server `8.134.118.29`。当前公网方案已经迁移到 Ubuntu 24.04
+服务器 `203.195.243.106`；“RK”是本次用于替代 RPi 完成验证的 RK3576，“上位机”是
+运行 Firefox 或 `ros2_viewer` 的 Arch Linux PC。
 
-> 当前已经验证：RK3576 USB 摄像头的视频可以在 Firefox 网页和 Qt `ros2_viewer` 中显示。
-> 当前成功路径是局域网 WebRTC 直连；还没有部署 TURN。因此，RPi 和上位机位于不同
-> NAT/运营商网络时不能保证成功，详见“当前限制与正式部署”。
+> 当前已经验证：RK3576 与上位机处于不同公网/NAT 网络时，可通过 Ubuntu 上的 coturn
+> 中继视频，并在 Firefox 和 Qt `ros2_viewer` 中稳定显示。当前稳定测试配置为
+> 640×360@15、目标 600 kbps。真实 RPi 尚未实机验证。
 
 ## 1. 最终架构
 
@@ -16,21 +17,22 @@
                           信令（JSON over WebSocket）
 RK/RPi publisher ───────────────┐
                                ▼
-                     8.134.118.29:8765
+                     203.195.243.106:8765
                      signaling_server.py
                                ▲
 Qt/Firefox viewer ─────────────┘
 
                           网页（HTTP）
-Qt/Firefox viewer ─────► 8.134.118.29:8080/index.html
+Qt/Firefox viewer ─────► 203.195.243.106:8080/index.html
 
                        实际视频（WebRTC SRTP）
-RK/RPi publisher ═════════════════════════════► Qt/Firefox viewer
-                         局域网直连
+RK/RPi publisher ─────► 203.195.243.106:3478 coturn ─────► Qt/Firefox viewer
+                         UDP 49160–49200 relay
 ```
 
-云服务器的 8765 只交换 SDP 和 ICE candidate，不承载视频。8080 只提供 HTML/JavaScript
-页面，也不承载持续视频流。实际视频在本次验证中从 RK 直接发送给上位机。
+云服务器的 8765 只交换 SDP 和 ICE candidate。8080 只提供 HTML/JavaScript 页面。
+跨公网验证时，实际视频由 3478 上的 coturn 建立 allocation，再通过 49160–49200 中的
+动态 UDP relay 端口中继。ICE 仍会优先尝试直连，无法直连时使用 TURN。
 
 WebRTC 与已有业务端口相互独立：
 
@@ -38,6 +40,8 @@ WebRTC 与已有业务端口相互独立：
 | --- | --- |
 | TCP 8765 | WebRTC 信令 WebSocket |
 | TCP 8080 | WebRTC viewer 静态网页 |
+| TCP/UDP 3478 | TURN/STUN 监听与认证 |
+| UDP 49160–49200 | TURN 实际媒体中继端口范围 |
 | TCP 8770 ↔ 8771 | 原有控制 JSON 转发对 |
 | TCP 8772 ↔ 8773 | 导航/状态 JSON 转发对；8772 为 `status_node`，8773 为 viewer |
 | TCP 8774–8777 | 当前仅监听，没有配置业务转发关系 |
@@ -66,11 +70,11 @@ RK3576/SBGDUT/ros2_viewer        # Linux x86-64 Qt 上位机程序
 signaling_server.py
 SHA256 F3A0DE5D97D416B44659514DA68999671554E2A2CC35B7F5BCDAEC720725542E
 
-cloud/web/index.html（云端加入 controls 后）
-SHA256 6CF72484C1F35289A474AFD19B3D6F0150FE9C13B900B342E2D73DD1D76BBAB9
+cloud/web/index.html（含自建 TURN）
+SHA256 1388D7DF87444719A22141CFC82BDDA626A353495F5A25C287E7EB4988B8ABE2
 
-rk_publisher.py
-SHA256 84067420892E5278CC8C6447372D369C561FAB19CB79FDEBA28FCBC9DF4DD23E
+rk_publisher.py（640×360@15、600 kbps）
+SHA256 789093D5C85134F94CEEF36612E3BE4705F33B87F38536BB42FD5C3EF2DB9BE8
 ```
 
 注意：仓库中的 `index.html` 已同步加入 `controls`。以后如果继续修改文件，哈希自然会改变，
@@ -170,8 +174,12 @@ ICE connection state ... checking
 ```
 
 浏览器为了保护本机 IP，把真实局域网地址替换成随机 `.local` mDNS 名称。RK 无法解析该
-名称；同时 `stun.l.google.com` 没有产生可用的 server-reflexive candidate，导致双方没有
+名称；同时初始配置的 `stun.l.google.com` 没有产生可用的 server-reflexive candidate，导致双方没有
 可用路径。这个问题与摄像头、H.264、8765 信令和网页服务器均无关。
+
+针对中国大陆网络，后续默认配置已调整为：RK/RPi 使用
+`stun://stun.miwifi.com:3478`；网页依次尝试 `stun.miwifi.com`、`stun.hitv.com` 和
+`stun.cloudflare.com`。公共 STUN 没有本项目可依赖的 SLA，正式环境仍需实测或自建。
 
 ### 3.5 Firefox 和 Qt 的处理不同
 
@@ -341,6 +349,7 @@ export WEBRTC_CAMERA=/dev/video2
 ```bash
 export WEBRTC_SIGNAL_URL=ws://8.134.118.29:8765
 export WEBRTC_CAMERA=/dev/video0
+export WEBRTC_STUN_URL=stun://stun.miwifi.com:3478
 python3 rk_publisher.py
 ```
 
@@ -589,13 +598,13 @@ ICE transport 插件齐全。
 
 ## 9. 当前限制与正式部署
 
-### 9.1 当前方案只保证已验证局域网
+### 9.1 局域网直连与公网 TURN
 
-关闭浏览器 mDNS 隐藏后，真实局域网 IP 会进入 candidate。同一局域网中可以直连；如果
-RPi 和上位机分别处于家庭宽带、校园网、移动网络、CGNAT 或严格防火墙之后，即使信令仍然
-成功，媒体仍可能失败。
+同一局域网中可以直连。RPi/RK 和上位机分别处于家庭宽带、校园网、移动网络、CGNAT 或
+严格防火墙之后时，STUN 只负责发现映射地址，不能保证打洞成功。本项目已增加自建 TURN
+作为失败兜底，公网实测媒体路径经过 `203.195.243.106`。
 
-### 9.2 正式公网需要 TURN
+### 9.2 当前 TURN 部署
 
 TURN 提供兜底媒体路径：
 
@@ -603,13 +612,9 @@ TURN 提供兜底媒体路径：
 RPi ──加密 WebRTC 媒体──► TURN ──加密 WebRTC 媒体──► Qt PC
 ```
 
-不想在 Windows 云服务器安装 WSL 时，可选：
-
-1. 使用托管 TURN，例如 Cloudflare Realtime TURN；
-2. 在另一台 Linux 云主机部署 coturn；
-3. 在 Windows 上运行经过审计和维护的原生 TURN 服务。
-
-TURN 上线后，浏览器应恢复默认隐私设置，Qt 也不再依赖关闭 mDNS 的 Chromium flag。
+当前采用 Ubuntu 24.04 + coturn，不再依赖 Windows 上的 WSL/Docker。TURN 上线后，跨网
+连接不再依赖浏览器暴露局域网 host candidate；Qt 启动时保留关闭 mDNS 的 Chromium flag
+仅用于兼容现有测试环境，不再是 TURN 成功的必要条件。
 
 ### 9.3 安全与生产化缺口
 
@@ -619,7 +624,7 @@ TURN 上线后，浏览器应恢复默认隐私设置，Qt 也不再依赖关闭
 - 8765 `ws://` 升级为 `wss://`；
 - publisher/viewer 身份认证和授权；
 - 短期 TURN 凭据，禁止把长期密钥写入 HTML；
-- 进程注册为 Windows Service/systemd 服务并设置自动重启；
+- coturn、信令和网页服务已注册 systemd 并设置开机启动；
 - 日志轮转、健康检查和带宽监控；
 - 限制一对一会话的抢占权限；
 - TURN/信令凭据撤销和密钥轮换。
@@ -629,7 +634,7 @@ TURN 上线后，浏览器应恢复默认隐私设置，Qt 也不再依赖关闭
 
 ## 10. 本次成功验收结果
 
-截至 2026-09-04，以下项目已人工验证：
+截至 2026-09-05，以下项目已人工验证：
 
 - [x] RK USB 摄像头 MJPEG 1280×720@30 可读取；
 - [x] RK `mpph264enc` H.264 硬件编码链路正常；
@@ -639,9 +644,243 @@ TURN 上线后，浏览器应恢复默认隐私设置，Qt 也不再依赖关闭
 - [x] publisher/viewer 的 Offer、Answer、ICE candidate 双向转发；
 - [x] Firefox 关闭 mDNS 地址隐藏后显示视频；
 - [x] Qt `ros2_viewer` 带 WebEngine flag 启动后显示视频；
+- [x] Ubuntu 24.04 coturn 安装、认证、allocation 和 systemd 自启动；
+- [x] RK 与 Arch PC 位于不同公网/NAT 时，TURN 双向媒体中继；
+- [x] 云端 49160–49200 relay 端口与 PC 双向 UDP 抓包验证；
+- [x] Arch 开启 Mihomo/VPN 时用策略路由绕过虚拟网卡；
+- [x] 640×360@15、600 kbps 在 Firefox 与 Qt 中稳定播放；
 - [ ] 真实 RPi USB/CSI 摄像头尚未实机验证；
-- [ ] 不同公网/NAT 下的 TURN 路径尚未部署和验证；
-- [ ] HTTPS/WSS、认证与服务自启动尚未完成。
+- [ ] 720p/更高码率需要按云服务器公网带宽继续调优；
+- [ ] HTTPS/WSS、业务身份认证和短期 TURN 凭据尚未完成。
 
-因此当前结论是：**WebRTC 原型已经端到端成功；迁移到 RPi 时主要工作是按 RPi 实际相机
-和编码器替换 GStreamer pipeline。若要求任意公网环境稳定工作，下一阶段必须增加 TURN。**
+因此当前结论是：**WebRTC 公网 TURN 原型已经端到端成功；迁移到 RPi 时主要工作是按
+RPi 实际相机和编码器替换 GStreamer pipeline，并按云服务器公网带宽控制视频码率。**
+
+## 11. Ubuntu 24.04 公网 TURN 实际部署记录
+
+### 11.1 实测环境
+
+```text
+Ubuntu 24.04 云服务器
+公网 IP：203.195.243.106
+VPC 内网 IP：10.1.0.12
+
+RK3576 publisher 公网出口：113.84.9.77
+Arch viewer 公网出口：14.153.53.218
+Arch 局域网地址：192.168.0.103
+```
+
+云厂商通过 NAT 把 `203.195.243.106` 映射到实例网卡的 `10.1.0.12`，所以实例内部
+`hostname -I` 看不到公网地址是正常现象。
+
+### 11.2 安装与 coturn 配置
+
+```bash
+sudo apt update
+sudo apt install -y coturn
+```
+
+`/etc/turnserver.conf` 的已验证结构如下。`<TURN_PASSWORD>` 必须替换成随机强密码，不要
+照抄仓库或聊天记录中的联调密码：
+
+```ini
+listening-port=3478
+listening-ip=10.1.0.12
+relay-ip=10.1.0.12
+external-ip=203.195.243.106/10.1.0.12
+min-port=49160
+max-port=49200
+fingerprint
+lt-cred-mech
+realm=gdut-webrtc
+user=gdut:<TURN_PASSWORD>
+stale-nonce=600
+no-multicast-peers
+no-cli
+log-file=/var/log/turnserver.log
+simple-log
+```
+
+Ubuntu 包安装时可能立即用默认配置启动 coturn。因此，写完配置后必须显式重启，不能只
+执行 `enable --now`：
+
+```bash
+sudo sed -i 's/^#\?TURNSERVER_ENABLED=.*/TURNSERVER_ENABLED=1/' /etc/default/coturn
+sudo install -o turnserver -g turnserver -m 0640 /dev/null /var/log/turnserver.log
+sudo systemctl enable coturn
+sudo systemctl restart coturn
+sudo systemctl --no-pager --full status coturn
+```
+
+如果日志出现找不到 TLS certificate/private key 的警告，当前普通 `turn:` UDP/TCP 3478
+联调仍可工作；部署 `turns:` TLS 前才需要配置证书和 5349。
+
+### 11.3 腾讯云安全组
+
+入站至少允许：
+
+| 协议 | 端口 | 测试阶段来源 | 用途 |
+| --- | --- | --- | --- |
+| UDP | 3478 | `0.0.0.0/0` | TURN 首选传输 |
+| TCP | 3478 | `0.0.0.0/0` | TURN TCP 兜底 |
+| UDP | 49160–49200 | `0.0.0.0/0` | 媒体 relay |
+| TCP | 8765 | `0.0.0.0/0` | WebSocket 信令 |
+| TCP | 8080 | `0.0.0.0/0` | viewer 页面 |
+
+只开放 3478 不够：3478 用于认证和 allocation，实际媒体由 49160–49200 中选出的端口
+转发。本次抓包实际选中了 UDP 49161。
+
+### 11.4 信令和网页 systemd 服务
+
+云端目录：
+
+```text
+/home/ubuntu/webrtc-cloud/
+├── signaling_server.py
+└── web/index.html
+```
+
+信令服务 `gdut-signaling.service`：
+
+```ini
+[Unit]
+Description=GDUT WebRTC Signaling Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/webrtc-cloud
+ExecStart=/usr/bin/python3 /home/ubuntu/webrtc-cloud/signaling_server.py
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
+```
+
+网页服务 `gdut-web.service`：
+
+```ini
+[Unit]
+Description=GDUT WebRTC Viewer Web Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/webrtc-cloud/web
+ExecStart=/usr/bin/python3 -m http.server 8080 --bind 0.0.0.0 --directory /home/ubuntu/webrtc-cloud/web
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
+```
+
+启用：
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now gdut-signaling gdut-web
+```
+
+### 11.5 Mihomo/VPN 路由问题
+
+Arch PC 开启 Mihomo 后，最初到云服务器的流量被送入虚拟网卡：
+
+```text
+203.195.243.106 via 198.18.0.2 dev Mihomo table 2022 src 198.18.0.1
+```
+
+真实 Wi-Fi 路径为 `192.168.0.1 dev wlp3s0`。联调时增加高优先级策略，使云服务器流量
+保持直连而 VPN 继续用于其他流量：
+
+```bash
+sudo ip rule add priority 100 to 203.195.243.106/32 lookup main
+ip -4 route get 203.195.243.106
+```
+
+期望输出包含：
+
+```text
+via 192.168.0.1 dev wlp3s0 src 192.168.0.103
+```
+
+这条规则重启后消失；正式使用可交给 NetworkManager dispatcher 或 Mihomo 的直连规则
+持久化。若重复添加提示 `File exists`，先用 `ip -4 rule show` 检查现有规则。
+
+### 11.6 已验证低码率 pipeline
+
+未限制码率时，720p30 通过 TURN 出现少量首帧、极端延迟、静止画面和最终断线。抓包确认
+媒体已经进入 coturn 并到达 PC，根因是自动码率超过云服务器公网带宽，而不是 TURN、
+摄像头或防火墙。
+
+当前稳定设置：
+
+```text
+USB 摄像头：MJPEG 640×360@30
+编码输出：H.264 640×360@15
+码控：CBR
+目标：600000 bps
+最小：300000 bps
+最大：800000 bps
+GOP：15（约每秒一个 I 帧）
+```
+
+核心 pipeline 片段：
+
+```text
+v4l2src device=/dev/video0 !
+image/jpeg,width=640,height=360,framerate=30/1 !
+jpegparse ! jpegdec ! videoconvert ! videorate !
+video/x-raw,format=NV12,framerate=15/1 !
+mpph264enc rc-mode=cbr bps=600000 bps-min=300000 bps-max=800000 gop=15 !
+h264parse config-interval=-1 ! rtph264pay config-interval=-1 pt=96 ! webrtc.
+```
+
+提高画质前先确认云服务器公网出带宽。经验起点：1 Mbps 带宽使用约 700–800 kbps；
+3 Mbps 带宽使用 720p15、1.5–2 Mbps；必须为 TURN、DTLS、RTP 和信令保留余量。
+
+### 11.7 Firefox 与 Qt 验证顺序
+
+当前信令服务器每个角色只允许一个连接。Firefox 与 Qt 同时打开时会每两秒互相替换，日志
+重复出现 `viewer new connection replaced the old connection` 和关闭码 4001。测试时只保留
+一个 viewer：
+
+1. 停止 RK publisher；
+2. 关闭其他 Firefox WebRTC 标签页和 Qt viewer；
+3. 打开 `http://203.195.243.106:8080/`，等待“信令已连接”；
+4. 再执行 `python3 ~/Downloads/rk_publisher.py`，且不要使用 `timeout`；
+5. 切换 Firefox/Qt 时先停止 publisher，再按相同顺序启动。
+
+Qt 启动命令：
+
+```bash
+env QTWEBENGINE_CHROMIUM_FLAGS='--disable-features=WebRtcHideLocalIpsWithMdns' \
+  /home/i4N/Dev.i4N/Other/sbgdut/RK3576/SBGDUT/ros2_viewer
+```
+
+Qt 中填写：
+
+```text
+http://203.195.243.106:8080/
+```
+
+不要把带 `timeout 35s` 或 `timeout 45s` 的调试命令当作正式启动命令；时间到后 publisher
+会被主动终止，viewer 随后显示 `failed`，这不是 TURN allocation 过期。
+
+### 11.8 抓包验收证据
+
+本次云端抓包确认：
+
+```text
+RK 113.84.9.77:55071 → TURN 10.1.0.12:3478
+TURN 10.1.0.12:49161 → PC 14.153.53.218:33284
+PC 14.153.53.218:33284 → TURN 10.1.0.12:49161
+```
+
+Arch 的 `wlp3s0` 同时捕获到 `203.195.243.106:49161 → 192.168.0.103` 的连续 RTP/SRTP
+数据包。因此公网 TURN 的 allocation、权限、双向 relay 和媒体抵达均已实际验证。

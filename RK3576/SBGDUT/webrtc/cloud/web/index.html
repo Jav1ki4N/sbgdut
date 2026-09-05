@@ -19,7 +19,23 @@
     const statusBox = document.getElementById("status");
     const signalScheme = location.protocol === "https:" ? "wss" : "ws";
     const signalUrl = `${signalScheme}://${location.hostname}:8765`;
-    const iceServers = [{urls: "stun:stun.l.google.com:19302"}];
+    const iceServers = [
+      {
+        urls: [
+        "stun:stun.miwifi.com:3478",
+        "stun:stun.hitv.com:3478",
+        "stun:stun.cloudflare.com:3478"
+        ]
+      },
+      {
+        urls: [
+          "turn:203.195.243.106:3478?transport=udp",
+          "turn:203.195.243.106:3478?transport=tcp"
+        ],
+        username: "gdut",
+        credential: "a731f8fb76bb516e021623e71255bfd6"
+      }
+    ];
 
     let socket = null;
     let peer = null;
